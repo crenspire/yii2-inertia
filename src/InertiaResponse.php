@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Crenspire\Yii2Inertia;
 
 use Yii;
-use yii\web\JsonResponse;
 use yii\web\Response;
 
 /**
@@ -19,9 +18,9 @@ class InertiaResponse
      * @param string $component Component name
      * @param array<string, mixed> $props Props
      * @param string $version Asset version
-     * @return JsonResponse
+     * @return Response
      */
-    public static function json(string $component, array $props, string $version): JsonResponse
+    public static function json(string $component, array $props, string $version): Response
     {
         $request = Yii::$app->request;
         
@@ -39,13 +38,9 @@ class InertiaResponse
             'version' => $version,
         ];
 
-        try {
-            $response = new JsonResponse($payload);
-        } catch (\Exception $e) {
-            // Fallback to basic response if JSON encoding fails
-            $response = new JsonResponse(['error' => 'Failed to encode response'], 500);
-        }
-        
+        $response = Yii::$app->response;
+        $response->data = $payload;
+        $response->format = Response::FORMAT_JSON;
         $response->headers->set('X-Inertia', 'true');
         $response->headers->set('Vary', 'Accept');
         

@@ -69,10 +69,10 @@ class Inertia extends Component
         }
 
         if ($isInertiaRequest) {
-            return InertiaResponse::json($component, $allProps, self::getVersion());
+            return InertiaResponse::json($component, $allProps, self::version());
         }
 
-        return InertiaResponse::html($component, $allProps, self::getVersion(), self::$rootView);
+        return InertiaResponse::html($component, $allProps, self::version(), self::$rootView);
     }
 
     /**
@@ -262,7 +262,7 @@ class Inertia extends Component
         }
 
         $requestVersion = $request->headers->get('X-Inertia-Version');
-        $currentVersion = self::getVersion();
+        $currentVersion = self::version();
 
         return $requestVersion !== (string) $currentVersion;
     }

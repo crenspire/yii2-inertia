@@ -8,7 +8,6 @@ use Crenspire\Yii2Inertia\InertiaResponse;
 use PHPUnit\Framework\TestCase;
 use Yii;
 use yii\web\Application;
-use yii\web\JsonResponse;
 use yii\web\Request;
 use yii\web\Response;
 
@@ -44,10 +43,11 @@ class InertiaResponseTest extends TestCase
     {
         $response = InertiaResponse::json('TestComponent', ['prop' => 'value'], '1.0');
         
-        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertEquals(Response::FORMAT_JSON, $response->format);
         $this->assertEquals('true', $response->headers->get('X-Inertia'));
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertEquals('TestComponent', $data['component']);
         $this->assertEquals(['prop' => 'value'], $data['props']);
         $this->assertEquals('1.0', $data['version']);

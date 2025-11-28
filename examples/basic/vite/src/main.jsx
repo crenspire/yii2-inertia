@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/inertia-react';
+import './app.css';
 
 // Import page components
 import Home from './pages/Home';

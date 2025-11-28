@@ -8,7 +8,6 @@ use Crenspire\Yii2Inertia\Inertia;
 use PHPUnit\Framework\TestCase;
 use Yii;
 use yii\web\Application;
-use yii\web\JsonResponse;
 use yii\web\Request;
 use yii\web\Response;
 
@@ -47,10 +46,11 @@ class InertiaIntegrationTest extends TestCase
         
         $response = Inertia::render('TestComponent', ['test' => 'value']);
         
-        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertEquals(Response::FORMAT_JSON, $response->format);
         $this->assertEquals('true', $response->headers->get('X-Inertia'));
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertEquals('TestComponent', $data['component']);
         $this->assertEquals('value', $data['props']['test']);
     }
@@ -80,7 +80,7 @@ class InertiaIntegrationTest extends TestCase
         
         $response = Inertia::render('TestComponent', ['local' => 'local-value']);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertEquals('shared-value', $data['props']['shared']);
         $this->assertEquals('local-value', $data['props']['local']);
     }
@@ -96,7 +96,7 @@ class InertiaIntegrationTest extends TestCase
         
         $response = Inertia::render('TestComponent', []);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertEquals($timestamp, $data['props']['timestamp']);
     }
 
@@ -112,7 +112,7 @@ class InertiaIntegrationTest extends TestCase
             'excluded' => 'excluded-value',
         ]);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         // Shared props should always be included
         $this->assertArrayHasKey('shared', $data['props']);
         // Requested partial prop should be included
@@ -128,7 +128,7 @@ class InertiaIntegrationTest extends TestCase
         
         $response = Inertia::render('TestComponent', []);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertEquals('test-version-123', $data['version']);
     }
 
@@ -172,7 +172,7 @@ class InertiaIntegrationTest extends TestCase
         
         $response = Inertia::render('TestComponent', []);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertStringContainsString('test=value', $data['url']);
     }
 
@@ -187,7 +187,7 @@ class InertiaIntegrationTest extends TestCase
             'local' => 'local-value',
         ]);
         
-        $data = json_decode($response->data, true);
+        $data = $response->data;
         $this->assertArrayHasKey('shared', $data['props']);
         $this->assertArrayHasKey('local', $data['props']);
     }

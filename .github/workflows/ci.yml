@@ -6,37 +6,58 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
+    name: PHP ${{ matrix.php-version }} (${{ matrix.dependencies }} dependencies)
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        php-version: ['8.1', '8.2', '8.3']
-    
+        php-version: ['8.1', '8.2', '8.3', '8.4', '8.5']
+        dependencies: ['highest']
+        include:
+          - php-version: '8.1'
+            dependencies: 'lowest'
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
           extensions: json
           coverage: none
-      
-      - name: Cache Composer dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.composer/cache
-          key: ${{ runner.os }}-php-${{ matrix.php-version }}-composer-${{ hashFiles('**/composer.json') }}
-          restore-keys: |
-            ${{ runner.os }}-php-${{ matrix.php-version }}-composer-
-      
+
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
-      
-      - name: Run PHP linter
-        run: find src tests -name "*.php" -exec php -l {} \;
-      
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.dependencies }}
+
+      - name: Lint
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
       - name: Run tests
         run: vendor/bin/phpunit
 
+  example:
+    name: Example frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/basic/vite
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build

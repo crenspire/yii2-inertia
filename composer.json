@@ -1,8 +1,9 @@
 {
     "name": "crenspire/yii2-inertia",
-    "description": "Inertia.js adapter for Yii2 framework",
-    "type": "library",
-    "keywords": ["yii2", "inertia", "inertiajs", "spa", "adapter"],
+    "description": "Inertia.js v3 adapter for the Yii2 framework",
+    "type": "yii2-extension",
+    "keywords": ["yii2", "inertia", "inertiajs", "spa", "adapter", "vite", "ssr"],
+    "homepage": "https://crenspire.github.io/yii2-inertia/",
     "license": "MIT",
     "authors": [
         {
@@ -10,21 +11,25 @@
             "email": "support@crenspire.com"
         }
     ],
+    "support": {
+        "docs": "https://crenspire.github.io/yii2-inertia/",
+        "issues": "https://github.com/crenspire/yii2-inertia/issues",
+        "source": "https://github.com/crenspire/yii2-inertia"
+    },
     "require": {
         "php": "^8.1",
-        "yiisoft/yii2": "~2.0.50",
-        "ext-json": "*"
+        "ext-json": "*",
+        "yiisoft/yii2": "~2.0.55"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.0",
-        "yiisoft/yii2-dev": "~2.0.50"
+        "phpunit/phpunit": "^10.5"
     },
     "autoload": {
         "psr-4": {
             "Crenspire\\Yii2Inertia\\": "src/"
         },
         "files": [
-            "src/Helpers.php"
+            "src/helpers.php"
         ]
     },
     "autoload-dev": {
@@ -32,10 +37,25 @@
             "Crenspire\\Yii2Inertia\\Tests\\": "tests/"
         }
     },
-    "config": {
-        "sort-packages": true
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ],
+    "extra": {
+        "bootstrap": "Crenspire\\Yii2Inertia\\Bootstrap",
+        "branch-alias": {
+            "dev-develop": "2.0.x-dev"
+        }
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true
+        }
+    }
 }
-

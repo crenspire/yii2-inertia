@@ -1,68 +1,46 @@
 <?php
 
-$params = require __DIR__ . '/params.php';
-$db = require __DIR__ . '/db.php';
+use Crenspire\Yii2Inertia\Manager;
 
-$config = [
-    'id' => 'basic',
+$params = require __DIR__ . '/params.php';
+
+return [
+    'id' => 'yii2-inertia-example',
+    'name' => $params['appName'],
     'basePath' => dirname(__DIR__),
-    'bootstrap' => ['log'],
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',
     ],
     'components' => [
         'request' => [
-            'cookieValidationKey' => 'your-secret-key-change-this',
+            // Change this to a random string in a real application.
+            'cookieValidationKey' => 'yii2-inertia-example-not-secret',
         ],
-        'cache' => [
-            'class' => 'yii\caching\FileCache',
-        ],
-        'user' => [
-            'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
-        ],
-        'errorHandler' => [
-            'errorAction' => 'site/error',
-        ],
-        'log' => [
-            'traceLevel' => YII_DEBUG ? 3 : 0,
-            'targets' => [
-                [
-                    'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
-                ],
-            ],
-        ],
-        'db' => $db,
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
                 '' => 'home/index',
                 'dashboard' => 'dashboard/index',
+                'GET contact' => 'contact/index',
+                'POST contact' => 'contact/store',
+                'feed' => 'feed/index',
             ],
         ],
-        'view' => [
-            'renderers' => [
-                'inertia' => \Crenspire\Yii2Inertia\ViewRenderer::class,
+        // The component is registered and bootstrapped automatically; configure it here.
+        'inertia' => [
+            'class' => Manager::class,
+            'rootView' => '@app/views/layouts/inertia.php',
+            'shared' => [
+                'appName' => $params['appName'],
+            ],
+            'vite' => [
+                // Start the dev server with `VITE_DEV_SERVER=http://localhost:5173 php -S ...` for HMR.
+                'devServerUrl' => getenv('VITE_DEV_SERVER') ?: null,
+                'reactRefresh' => true,
             ],
         ],
     ],
     'params' => $params,
 ];
-
-if (YII_ENV_DEV) {
-    $config['bootstrap'][] = 'debug';
-    $config['modules']['debug'] = [
-        'class' => 'yii\debug\Module',
-    ];
-
-    $config['bootstrap'][] = 'gii';
-    $config['modules']['gii'] = [
-        'class' => 'yii\gii\Module',
-    ];
-}
-
-return $config;
-

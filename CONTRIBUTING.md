@@ -7,7 +7,26 @@ Thank you for considering contributing to Yii2 Inertia!
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/yii2-inertia.git`
 3. Install dependencies: `composer install`
-4. Run tests: `vendor/bin/phpunit`
+4. Run tests: `composer test`
+
+The test suite starts a local PHP web server to exercise the SSR gateway, so it needs a free local port.
+
+To try changes in a browser, use the example application in `examples/basic` (see the README).
+
+## Documentation
+
+The documentation site (https://crenspire.github.io/yii2-inertia/) is built with [VitePress](https://vitepress.dev)
+from the `docs/` directory and deployed to GitHub Pages when changes reach `develop`.
+
+```bash
+cd docs
+npm install
+npm run dev      # local preview with hot reload
+npm run build    # production build, fails on dead links
+```
+
+Update the documentation together with code changes. The upgrade guide and changelog pages include `UPGRADE.md` and
+`CHANGELOG.md` from the repository root.
 
 ## Code Style
 
@@ -19,7 +38,8 @@ Thank you for considering contributing to Yii2 Inertia!
 ## Testing
 
 - Write tests for new features
-- Ensure all tests pass: `vendor/bin/phpunit`
+- Ensure all tests pass on every supported PHP version: `composer test`
+- Deprecations, notices and warnings fail the test suite
 - Aim for high code coverage
 
 ## Pull Request Process

@@ -1,4 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* Also generate the classes used in the Yii root view. */
+@source "../../views";

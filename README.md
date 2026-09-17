@@ -1,339 +1,176 @@
-# Yii2 Inertia.js Adapter
+<p align="center">
+  <img src="docs/public/logo.svg" width="96" height="96" alt="Yii2 Inertia">
+</p>
 
-[![CI](https://github.com/crenspire/yii2-inertia/workflows/CI/badge.svg)](https://github.com/crenspire/yii2-inertia/actions)
+<h1 align="center">Yii2 Inertia</h1>
 
-An Inertia.js adapter for Yii2 framework, providing a seamless bridge between your Yii2 backend and modern JavaScript frontend frameworks (React, Vue, Svelte).
+<p align="center">
+  The <a href="https://inertiajs.com">Inertia.js</a> v3 adapter for the <a href="https://www.yiiframework.com">Yii 2</a> framework.<br>
+  Build React, Vue and Svelte single-page apps with classic Yii controllers — no API required.
+</p>
+
+<p align="center">
+  <a href="https://github.com/crenspire/yii2-inertia/actions/workflows/ci.yml"><img src="https://github.com/crenspire/yii2-inertia/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://packagist.org/packages/crenspire/yii2-inertia"><img src="https://img.shields.io/packagist/v/crenspire/yii2-inertia" alt="Latest version"></a>
+  <a href="https://packagist.org/packages/crenspire/yii2-inertia"><img src="https://img.shields.io/packagist/dt/crenspire/yii2-inertia" alt="Downloads"></a>
+  <a href="https://packagist.org/packages/crenspire/yii2-inertia"><img src="https://img.shields.io/packagist/dependency-v/crenspire/yii2-inertia/php" alt="PHP version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/packagist/l/crenspire/yii2-inertia" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://crenspire.github.io/yii2-inertia/"><strong>Documentation</strong></a> ·
+  <a href="https://crenspire.github.io/yii2-inertia/guide/installation">Installation</a> ·
+  <a href="https://crenspire.github.io/yii2-inertia/guide/upgrade">Upgrading from 1.x</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+---
 
 ## Features
 
-- 🚀 **Simple API**: Match the developer experience of `inertia-laravel`
-- 📦 **Shared Props**: Share data across all Inertia responses
-- 🔄 **Partial Reloads**: Support for partial page updates
-- 🎯 **Asset Versioning**: Automatic version management for cache busting
-- 🧪 **Well Tested**: Comprehensive unit and integration tests
-- 📚 **Full Documentation**: Complete usage examples and guides
+- **Zero configuration** — the `inertia` component registers and bootstraps itself
+- **Complete Inertia v3 protocol** — partial reloads, deferred, optional, once, merge and infinite scroll props, asset
+  versioning, flash data, error bags, history encryption and fragment redirects
+- **Made for Yii** — Yii redirects, CSRF validation, JSON form bodies, model validation errors and data providers work
+  out of the box
+- **Vite integration** — asset tags from the build manifest or the dev server with hot module replacement
+- **Server-side rendering** with automatic fallback to client-side rendering
+
+## Requirements
+
+- PHP 8.1+
+- Yii 2.0.55+
+- An Inertia.js v3 client: `@inertiajs/react`, `@inertiajs/vue3` or `@inertiajs/svelte`
 
 ## Installation
 
-Install via Composer:
-
 ```bash
-composer require crenspire/yii2-inertia
+composer require crenspire/yii2-inertia:^2.0
 ```
 
-## Quick Start
+> Until 2.0.0 is tagged, install the development version: `composer require crenspire/yii2-inertia:2.0.x-dev`.
 
-### 1. Configure Your Application
-
-In your `config/web.php`, register the Inertia view renderer:
+Create the root view in `views/layouts/inertia.php` (see [`stubs/inertia.php`](stubs/inertia.php)):
 
 ```php
-'view' => [
-    'renderers' => [
-        'inertia' => \Crenspire\Yii2Inertia\ViewRenderer::class,
-    ],
-],
-```
+<?php
 
-### 2. Create Root View Template
+use Crenspire\Yii2Inertia\Inertia;
+use yii\helpers\Html;
 
-Create a root view template at `views/layouts/inertia.php`:
+/** @var yii\web\View $this */
+/** @var array $page */
+/** @var Crenspire\Yii2Inertia\Ssr\SsrResponse|null $ssr */
 
-```php
+$this->beginPage();
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= Html::encode(Yii::$app->language) ?>">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inertia.js App</title>
-    <script type="module" crossorigin src="/dist/assets/index.js"></script>
-    <link rel="stylesheet" crossorigin href="/dist/assets/index.css">
+    <meta charset="<?= Html::encode(Yii::$app->charset) ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title data-inertia><?= Html::encode(Yii::$app->name) ?></title>
+    <?= Inertia::vite()->tags('src/main.jsx') ?>
+    <?= Inertia::ssrHead($ssr) ?>
+    <?php $this->head() ?>
 </head>
 <body>
-    <div id="app" data-page="<?= htmlspecialchars(json_encode($page), ENT_QUOTES, 'UTF-8') ?>"></div>
+<?php $this->beginBody() ?>
+<?= Inertia::app($page, $ssr) ?>
+<?php $this->endBody() ?>
 </body>
 </html>
+<?php $this->endPage() ?>
 ```
 
-### 3. Use in Controllers
+Then set up the client side with Vite. The [installation guide](https://crenspire.github.io/yii2-inertia/guide/installation)
+walks through React, Vue and Svelte.
+
+## Usage
 
 ```php
 use Crenspire\Yii2Inertia\Inertia;
+use yii\web\Controller;
+use yii\web\Response;
 
-class HomeController extends \yii\web\Controller
+class UserController extends Controller
 {
-    public function actionIndex()
+    public function actionIndex(): Response
     {
-        return Inertia::render('Home', [
-            'title' => 'Welcome',
-            'user' => Yii::$app->user->identity,
+        return Inertia::render('Users/Index', [
+            'users' => fn () => User::find()->select(['id', 'name', 'email'])->asArray()->all(),
+            'stats' => Inertia::defer(fn () => Stats::summary()),
         ]);
+    }
+
+    public function actionCreate(): Response
+    {
+        $model = new User();
+
+        if ($this->request->isPost) {
+            if ($model->load($this->request->post(), '') && $model->save()) {
+                Inertia::flash('success', 'User created.');
+
+                return $this->redirect(['user/index']);
+            }
+
+            Inertia::withErrors($model);
+
+            return Inertia::back();
+        }
+
+        return Inertia::render('Users/Create');
     }
 }
 ```
 
-### 4. Setup Frontend
-
-Install Inertia.js and your frontend framework:
-
-```bash
-npm install @inertiajs/inertia @inertiajs/inertia-react react react-dom
-```
-
-Create `src/main.jsx`:
-
 ```jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { createInertiaApp } from '@inertiajs/inertia-react';
-import Home from './pages/Home';
+// src/pages/Users/Index.jsx
+import { Deferred, Link } from '@inertiajs/react'
 
-createInertiaApp({
-  resolve: (name) => {
-    const pages = { Home };
-    return pages[name];
-  },
-  setup({ el, App, props }) {
-    ReactDOM.createRoot(el).render(<App {...props} />);
-  },
-});
-```
-
-## API Reference
-
-### Inertia::render()
-
-Render an Inertia page:
-
-```php
-return Inertia::render('Dashboard', [
-    'users' => User::find()->all(),
-]);
-```
-
-### Inertia::share()
-
-Share data with all Inertia responses:
-
-```php
-// Single key-value
-Inertia::share('appName', 'My App');
-
-// Multiple values
-Inertia::share([
-    'user' => Yii::$app->user->identity,
-    'flash' => Yii::$app->session->getFlash('message'),
-]);
-
-// Using closures
-Inertia::share('timestamp', function () {
-    return time();
-});
-```
-
-### Inertia::version()
-
-Set or get the asset version:
-
-```php
-// String version
-Inertia::version('1.0.0');
-
-// Callback version
-Inertia::version(function () {
-    return filemtime(Yii::getAlias('@webroot/dist/manifest.json'));
-});
-
-// Get current version
-$version = Inertia::version();
-```
-
-### Inertia::location()
-
-Create an Inertia redirect response:
-
-```php
-return Inertia::location('/dashboard');
-```
-
-### Global Helper
-
-You can also use the global `inertia()` helper function:
-
-```php
-return inertia('Home', ['title' => 'Welcome']);
-```
-
-## Partial Reloads
-
-Inertia supports partial reloads for better performance. The client can request only specific props:
-
-```php
-// Client sends: X-Inertia-Partial-Component: Dashboard
-// Client sends: X-Inertia-Partial-Data: users,stats
-
-// Only 'users' and 'stats' props will be returned (plus shared props)
-return Inertia::render('Dashboard', [
-    'users' => $users,
-    'stats' => $stats,
-    'other' => $other, // This will be excluded
-]);
-```
-
-## Redirects
-
-For POST/PUT/PATCH/DELETE requests, Inertia handles redirects automatically:
-
-```php
-public function actionStore()
-{
-    // ... save data
-    
-    // For Inertia requests, returns 409 with X-Inertia-Location header
-    // For regular requests, returns 302 redirect
-    return Inertia::location('/dashboard');
+export default function Index({ users, stats }) {
+  return (
+    <>
+      <Deferred data="stats" fallback={<p>Loading stats…</p>}>
+        <p>{stats?.total} users</p>
+      </Deferred>
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}><Link href={`/users/${user.id}`}>{user.name}</Link></li>
+        ))}
+      </ul>
+    </>
+  )
 }
 ```
 
-The `Inertia::location()` method automatically detects the request type:
-- **Inertia requests**: Returns HTTP 409 with `X-Inertia-Location` header
-- **Regular requests**: Returns HTTP 302 with `Location` header
+## Documentation
 
-## Version Management
+The full documentation is available at **https://crenspire.github.io/yii2-inertia/**:
 
-Inertia.js uses version checking to ensure the frontend and backend stay in sync. When the client's version doesn't match the server's version, a full page reload is triggered.
+- [Introduction](https://crenspire.github.io/yii2-inertia/guide/introduction) and [installation](https://crenspire.github.io/yii2-inertia/guide/installation)
+- [Pages and props](https://crenspire.github.io/yii2-inertia/guide/responses), [shared data](https://crenspire.github.io/yii2-inertia/guide/shared-data), [redirects](https://crenspire.github.io/yii2-inertia/guide/redirects), [forms and validation](https://crenspire.github.io/yii2-inertia/guide/forms), [CSRF protection](https://crenspire.github.io/yii2-inertia/guide/csrf-protection)
+- [Partial reloads](https://crenspire.github.io/yii2-inertia/guide/partial-reloads), [deferred props](https://crenspire.github.io/yii2-inertia/guide/deferred-props), [merging props](https://crenspire.github.io/yii2-inertia/guide/merging-props), [once props](https://crenspire.github.io/yii2-inertia/guide/once-props), [infinite scroll](https://crenspire.github.io/yii2-inertia/guide/infinite-scroll)
+- [Vite](https://crenspire.github.io/yii2-inertia/guide/vite), [server-side rendering](https://crenspire.github.io/yii2-inertia/guide/ssr), [testing](https://crenspire.github.io/yii2-inertia/guide/testing), [troubleshooting](https://crenspire.github.io/yii2-inertia/guide/troubleshooting)
+- [Configuration](https://crenspire.github.io/yii2-inertia/reference/configuration) and [API reference](https://crenspire.github.io/yii2-inertia/reference/inertia)
 
-### Automatic Version Detection
+## Example application
 
-By default, the version is automatically detected from your `manifest.json` file:
-
-```php
-// Automatically uses dist/manifest.json mtime if it exists
-$version = Inertia::version();
-```
-
-### Custom Version
-
-You can set a custom version:
-
-```php
-// String version
-Inertia::version('1.0.0');
-
-// Callback version (evaluated on each request)
-Inertia::version(function () {
-    return filemtime(Yii::getAlias('@webroot/dist/manifest.json'));
-});
-```
-
-### Version Mismatch Handling
-
-When a client sends an `X-Inertia-Version` header that doesn't match the current version, the adapter automatically returns a location redirect (409 status) to trigger a full page reload. This ensures users always have the latest assets.
-
-## Configuration
-
-### Root View Path
-
-You can configure the root view path:
-
-```php
-Inertia::setRootView('@app/views/custom-inertia.php');
-```
-
-### Bootstrap/Initialization
-
-For shared props that should be available on every page, you can set them in your application bootstrap or a common controller:
-
-```php
-// In config/bootstrap.php or a base controller
-use Crenspire\Yii2Inertia\Inertia;
-
-// Share user data
-Inertia::share('user', function () {
-    return Yii::$app->user->identity;
-});
-
-// Share flash messages
-Inertia::share('flash', function () {
-    return [
-        'success' => Yii::$app->session->getFlash('success'),
-        'error' => Yii::$app->session->getFlash('error'),
-    ];
-});
-```
-
-## Troubleshooting
-
-### Version Mismatch Issues
-
-If you're experiencing frequent full page reloads, check:
-1. Your version callback is returning a stable value
-2. The `manifest.json` file exists and is accessible
-3. File permissions allow reading the manifest file
-
-### Redirect Not Working
-
-If redirects aren't working as expected:
-1. Ensure you're using `Inertia::location()` instead of Yii's `redirect()`
-2. Check that the request has the `X-Inertia` header for Inertia requests
-3. Verify the response status code (409 for Inertia, 302 for regular)
-
-### Root View Not Found
-
-If you get "Root view file not found" errors:
-1. Verify the path in `Inertia::setRootView()` is correct
-2. Check that the view file exists and is readable
-3. Ensure Yii aliases are properly configured
-
-## Running the Example
-
-The repository includes a complete example application. To run it:
+[`examples/basic`](examples/basic) is a complete application with React 19, Vite and Tailwind CSS, demonstrating
+deferred props, partial reloads, forms with validation errors, flash data and infinite scroll:
 
 ```bash
-# Install dependencies
 cd examples/basic
 composer install
-
-# Install frontend dependencies
-cd vite
-npm install
-
-# Build frontend assets
-npm run build
-
-# Or run dev server
-npm run dev
-
-# Start PHP server
-cd ../web
-php -S localhost:8000
+cd vite && npm install && npm run build && cd ..
+php -S localhost:8080 -t web web/router.php
 ```
-
-Visit `http://localhost:8000` in your browser.
-
-## Testing
-
-Run the test suite:
-
-```bash
-composer install
-vendor/bin/phpunit
-```
-
-## Requirements
-
-- PHP ^8.1
-- Yii2 ~2.0.50
-
-## License
-
-MIT License. See [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, including how to run the
+tests and the documentation site locally.
 
-## Changelog
+## License
 
-See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
-
+The MIT License. See [LICENSE](LICENSE).

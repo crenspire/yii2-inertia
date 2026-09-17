@@ -6,15 +6,16 @@ namespace app\controllers;
 
 use Crenspire\Yii2Inertia\Inertia;
 use yii\web\Controller;
+use yii\web\Response;
 
 class HomeController extends Controller
 {
-    public function actionIndex()
+    public function actionIndex(): Response
     {
         return Inertia::render('Home', [
-            'title' => 'Welcome to Inertia.js with Yii2',
-            'message' => 'This is the home page rendered with Inertia!',
+            'message' => 'This page is rendered by a Yii2 controller and a React component.',
+            'phpVersion' => PHP_VERSION,
+            'yiiVersion' => \Yii::getVersion(),
         ]);
     }
 }
-

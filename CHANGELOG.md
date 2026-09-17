@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - Unreleased
 
-A rewrite implementing the Inertia.js v3 protocol. See [UPGRADE.md](UPGRADE.md) for migration instructions.
+A rewrite implementing the Inertia.js v3 protocol. See the [upgrade guide](https://crenspire.github.io/yii2-inertia/guide/upgrade) for migration instructions.
 
 ### Added
 - `inertia` application component (`Manager`), bootstrapped automatically through composer `extra.bootstrap`
@@ -26,6 +26,7 @@ A rewrite implementing the Inertia.js v3 protocol. See [UPGRADE.md](UPGRADE.md) 
   for test environments without a frontend build
 - Server-side rendering through `Ssr\HttpGateway` (production server and Vite dev server), with path exclusions
 - `Inertia::app()` and `Inertia::ssrHead()` root view helpers, `stubs/inertia.php`
+- Documentation site at https://crenspire.github.io/yii2-inertia/ (guides and API reference)
 - Example application rewritten for Inertia v3, React 19, Vite 8 and Tailwind CSS 4
 - Test suite covering the protocol, lifecycle, Vite and SSR; CI on PHP 8.1–8.5 with lowest and highest dependencies
 

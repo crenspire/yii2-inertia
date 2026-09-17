@@ -14,3 +14,5 @@ node_modules/
 /examples/basic/runtime/
 /examples/basic/web/dist/
 /examples/basic/vite/package-lock.json
+/docs/.vitepress/dist/
+/docs/.vitepress/cache/

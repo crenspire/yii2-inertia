@@ -27,7 +27,7 @@ Replace hard-coded asset URLs (which never matched Vite's hashed file names) wit
 + <?= Inertia::vite()->tags('src/main.jsx') ?>
 ```
 
-See [`stubs/inertia.php`](stubs/inertia.php) for a complete root view.
+See [`stubs/inertia.php`](https://github.com/crenspire/yii2-inertia/blob/develop/stubs/inertia.php) for a complete root view.
 
 ### Configuration
 
@@ -78,4 +78,4 @@ See [`stubs/inertia.php`](stubs/inertia.php) for a complete root view.
 
 Validation errors (`withErrors()`), flash data, error bags, deferred / optional / once / merge / infinite scroll props,
 history encryption, fragment redirects, CSRF cookie support, JSON request bodies, Vite integration and SSR.
-See the [README](README.md).
+See the [documentation](https://crenspire.github.io/yii2-inertia/).

@@ -13,6 +13,21 @@ The test suite starts a local PHP web server to exercise the SSR gateway, so it 
 
 To try changes in a browser, use the example application in `examples/basic` (see the README).
 
+## Documentation
+
+The documentation site (https://crenspire.github.io/yii2-inertia/) is built with [VitePress](https://vitepress.dev)
+from the `docs/` directory and deployed to GitHub Pages when changes reach `develop`.
+
+```bash
+cd docs
+npm install
+npm run dev      # local preview with hot reload
+npm run build    # production build, fails on dead links
+```
+
+Update the documentation together with code changes. The upgrade guide and changelog pages include `UPGRADE.md` and
+`CHANGELOG.md` from the repository root.
+
 ## Code Style
 
 - Follow PSR-12 coding standards

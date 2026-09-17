@@ -67,7 +67,9 @@ See [`stubs/inertia.php`](stubs/inertia.php) for a complete root view.
   shared props too. Use `Inertia::always()` for shared props that must always be sent. `X-Inertia-Partial-Except` and
   dot-notation paths are supported.
 - **Closures in props** are evaluated (previously they were encoded as `{}`), and only when the prop is sent.
-- **Version mismatches** return `409` only for `GET` requests, with an absolute `X-Inertia-Location`.
+- **Version mismatches** return `409` only for `GET` requests, with an absolute `X-Inertia-Location`. Requests
+  without an `X-Inertia-Version` header are treated as outdated, as the protocol requires: functional tests that
+  send `X-Inertia: true` must also send `X-Inertia-Version: <Inertia::getVersion()>`.
 - **`Inertia::location()`** accepts routes (`['site/index']`) and no longer adds `X-Inertia-Location` to non-Inertia redirects.
 - **Invalid UTF-8** in props throws a `JsonException` instead of rendering an empty page.
 - `Vary: X-Inertia` is sent instead of `Vary: Accept`.

@@ -22,7 +22,8 @@ A rewrite implementing the Inertia.js v3 protocol. See [UPGRADE.md](UPGRADE.md) 
   fragment redirects via `X-Inertia-Redirect`, redirect back for empty responses, Yii AJAX redirect (`X-Redirect`) fix
 - CSRF protection for the Inertia HTTP client (`XSRF-TOKEN` cookie / `X-XSRF-TOKEN` header)
 - Automatic `JsonParser` registration for JSON form submissions
-- `Vite` helper for manifest and dev server (HMR, React refresh, CSP nonces)
+- `Vite` helper for manifest and dev server (HMR, React refresh, CSP nonces), with `throwOnMissingManifest`
+  for test environments without a frontend build
 - Server-side rendering through `Ssr\HttpGateway` (production server and Vite dev server), with path exclusions
 - `Inertia::app()` and `Inertia::ssrHead()` root view helpers, `stubs/inertia.php`
 - Example application rewritten for Inertia v3, React 19, Vite 8 and Tailwind CSS 4

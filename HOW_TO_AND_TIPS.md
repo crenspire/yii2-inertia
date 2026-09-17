@@ -238,7 +238,17 @@ public function testIndexListsUsers(FunctionalTester $I): void
 ```
 
 Without the header you get the HTML root view; the page object is in `<script data-page="app" type="application/json">`.
-Send the `X-Inertia-Version` header with the current version (`Inertia::getVersion()`) to avoid `409` responses.
+Send the `X-Inertia-Version` header with the current version (`Inertia::getVersion()`) to avoid `409` responses:
+real clients always send it, and a missing or outdated version triggers a full reload.
+
+When the test environment has no frontend build, let pages render without asset tags:
+
+```php
+// config/test.php
+'components' => [
+    'inertia' => ['vite' => ['throwOnMissingManifest' => false]],
+],
+```
 
 ## Troubleshooting
 

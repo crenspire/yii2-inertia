@@ -52,6 +52,12 @@ class Vite extends BaseObject
     public bool $reactRefresh = false;
 
     /**
+     * @var bool Whether a missing build manifest throws an exception. When false, [[tags()]] logs a warning
+     * and renders nothing, which is useful in test environments that do not build the frontend.
+     */
+    public bool $throwOnMissingManifest = true;
+
+    /**
      * @var array<string, array<string, mixed>>|null
      */
     private ?array $manifest = null;
@@ -71,7 +77,17 @@ class Vite extends BaseObject
     {
         $entries = (array) $entries;
 
-        return $this->isRunningHot() ? $this->devTags($entries) : $this->buildTags($entries);
+        if ($this->isRunningHot()) {
+            return $this->devTags($entries);
+        }
+
+        if (!$this->throwOnMissingManifest && $this->manifestPath() === null) {
+            Yii::warning('Vite manifest not found in ' . Yii::getAlias($this->buildPath) . ', no assets are rendered.', __METHOD__);
+
+            return '';
+        }
+
+        return $this->buildTags($entries);
     }
 
     /**

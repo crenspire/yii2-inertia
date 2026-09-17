@@ -270,6 +270,9 @@ build manifest (including CSS of imported chunks and `modulepreload` links), in 
 ],
 ```
 
+A missing build manifest throws an exception. In test environments that do not build the frontend, set
+`'throwOnMissingManifest' => false` to render pages without asset tags (a warning is logged).
+
 `Inertia::vite()->asset('src/images/logo.svg')` returns the URL of an asset processed by Vite.
 Script tags respect the view's `scriptOptions`, so a CSP nonce is applied automatically.
 

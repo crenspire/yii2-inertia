@@ -7,7 +7,9 @@ namespace Crenspire\Yii2Inertia\Tests\Unit;
 use Crenspire\Yii2Inertia\Vite;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use Yii;
 use yii\base\InvalidConfigException;
+use yii\log\Logger;
 
 class ViteTest extends TestCase
 {
@@ -46,6 +48,17 @@ class ViteTest extends TestCase
     {
         $this->expectException(InvalidConfigException::class);
         (new Vite(['buildPath' => __DIR__ . '/does-not-exist']))->tags('src/main.jsx');
+    }
+
+    public function testMissingManifestCanBeIgnored(): void
+    {
+        $logger = new Logger();
+        Yii::setLogger($logger);
+
+        $vite = new Vite(['buildPath' => __DIR__ . '/does-not-exist', 'throwOnMissingManifest' => false]);
+
+        $this->assertSame('', $vite->tags('src/main.jsx'));
+        $this->assertStringContainsString('Vite manifest not found', $logger->messages[0][0]);
     }
 
     public function testLegacyManifestLocationAndHash(): void

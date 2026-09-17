@@ -1,7 +1,7 @@
 {
     "name": "crenspire/yii2-inertia",
-    "description": "Inertia.js adapter for Yii2 framework",
-    "type": "library",
+    "description": "Inertia.js v3 adapter for the Yii2 framework",
+    "type": "yii2-extension",
     "keywords": ["yii2", "inertia", "inertiajs", "spa", "adapter", "vite", "ssr"],
     "license": "MIT",
     "authors": [
@@ -23,7 +23,7 @@
             "Crenspire\\Yii2Inertia\\": "src/"
         },
         "files": [
-            "src/Helpers.php"
+            "src/helpers.php"
         ]
     },
     "autoload-dev": {
@@ -37,6 +37,9 @@
             "url": "https://asset-packagist.org"
         }
     ],
+    "extra": {
+        "bootstrap": "Crenspire\\Yii2Inertia\\Bootstrap"
+    },
     "scripts": {
         "test": "phpunit"
     },

@@ -5,266 +5,272 @@ declare(strict_types=1);
 namespace Crenspire\Yii2Inertia;
 
 use Closure;
+use Crenspire\Yii2Inertia\Props\AlwaysProp;
+use Crenspire\Yii2Inertia\Props\DeferProp;
+use Crenspire\Yii2Inertia\Props\MergeProp;
+use Crenspire\Yii2Inertia\Props\OnceProp;
+use Crenspire\Yii2Inertia\Props\OptionalProp;
+use Crenspire\Yii2Inertia\Props\ProvidesInertiaProperties;
+use Crenspire\Yii2Inertia\Props\ProvidesScrollMetadata;
+use Crenspire\Yii2Inertia\Props\ScrollProp;
+use Crenspire\Yii2Inertia\Ssr\SsrResponse;
 use Yii;
-use yii\base\Component;
+use yii\base\InvalidConfigException;
+use yii\base\Model;
+use yii\helpers\Html;
 use yii\web\Request;
 use yii\web\Response;
 
 /**
- * Inertia service facade for Yii2
- * 
- * Provides a static interface to Inertia functionality, matching the
- * developer experience of inertia-laravel.
+ * Static facade for the `inertia` application component ({@see Manager}).
+ *
+ * ```php
+ * return Inertia::render('Users/Index', [
+ *     'users' => fn () => User::find()->select(['id', 'name'])->asArray()->all(),
+ * ]);
+ * ```
  */
-class Inertia extends Component
+final class Inertia
 {
-    /**
-     * @var array<string, mixed> Shared props available to all Inertia responses
-     */
-    private static array $sharedProps = [];
+    public const COMPONENT_ID = 'inertia';
 
-    /**
-     * @var string|callable|null Asset version callback or string
-     */
-    private static $version = null;
-
-    /**
-     * @var string Root view template path
-     */
-    private static string $rootView = '@app/views/layouts/inertia.php';
-
-    /**
-     * Render an Inertia page
-     * 
-     * @param string $component The Inertia component name (e.g., 'Dashboard/Index')
-     * @param array<string, mixed> $props Props to pass to the component
-     * @return Response
-     */
-    public static function render(string $component, array $props = []): Response
+    private function __construct()
     {
-        // Validate component name
-        if (empty($component)) {
-            throw new \InvalidArgumentException('Component name cannot be empty');
-        }
-
-        // Validate props
-        if (!is_array($props)) {
-            throw new \InvalidArgumentException('Props must be an array');
-        }
-
-        $request = Yii::$app->request;
-        $isInertiaRequest = self::isInertiaRequest($request);
-
-        // Check for version mismatch (only for Inertia requests)
-        if ($isInertiaRequest && self::hasVersionMismatch($request)) {
-            return self::location($request->getUrl());
-        }
-
-        // Merge shared props
-        $allProps = array_merge(self::getSharedProps(), $props);
-
-        // Handle partial reloads
-        if ($isInertiaRequest && self::isPartialReload($request)) {
-            $allProps = self::filterPartialProps($allProps, $request);
-        }
-
-        if ($isInertiaRequest) {
-            return InertiaResponse::json($component, $allProps, self::version());
-        }
-
-        return InertiaResponse::html($component, $allProps, self::version(), self::$rootView);
     }
 
     /**
-     * Share data with all Inertia responses
-     * 
-     * @param string|array<string, mixed> $key Key or array of key-value pairs
-     * @param mixed $value Value or closure (if key is string)
-     * @return void
+     * Returns the `inertia` application component, registering it with defaults when it is not configured.
      */
-    public static function share($key, $value = null): void
+    public static function getManager(): Manager
     {
-        if (is_array($key)) {
-            foreach ($key as $k => $v) {
-                self::$sharedProps[$k] = $v;
-            }
-        } else {
-            self::$sharedProps[$key] = $value;
+        if (!Yii::$app->has(self::COMPONENT_ID)) {
+            Yii::$app->set(self::COMPONENT_ID, ['class' => Manager::class]);
         }
+
+        $manager = Yii::$app->get(self::COMPONENT_ID);
+        if (!$manager instanceof Manager) {
+            throw new InvalidConfigException(sprintf(
+                'The "%s" application component must be an instance of %s.',
+                self::COMPONENT_ID,
+                Manager::class,
+            ));
+        }
+
+        return $manager;
     }
 
     /**
-     * Get all shared props (evaluating closures)
-     * 
-     * @return array<string, mixed>
+     * @param array<int|string, mixed>|ProvidesInertiaProperties $props
+     * @param array<string, mixed> $viewData extra variables passed to the root view
      */
-    private static function getSharedProps(): array
+    public static function render(string|\BackedEnum $component, array|ProvidesInertiaProperties $props = [], array $viewData = []): Response
     {
-        $props = [];
-        foreach (self::$sharedProps as $key => $value) {
-            $props[$key] = $value instanceof Closure ? $value() : $value;
-        }
-        return $props;
+        return self::getManager()->render($component, $props, $viewData);
     }
 
-    /**
-     * Set or get the asset version
-     * 
-     * @param string|callable|null $version Version string or callback
-     * @return string|callable|null
-     */
-    public static function version($version = null)
+    public static function share(string|array|ProvidesInertiaProperties $key, mixed $value = null): void
     {
-        if ($version !== null) {
-            self::$version = $version;
-        }
-
-        if (self::$version === null) {
-            // Default: use manifest.json mtime if it exists
-            try {
-                $manifestPath = Yii::getAlias('@webroot/dist/manifest.json');
-                if (file_exists($manifestPath)) {
-                    $mtime = @filemtime($manifestPath);
-                    if ($mtime !== false) {
-                        return (string) $mtime;
-                    }
-                }
-            } catch (\Exception $e) {
-                // Fallback to default version if file operation fails
-            }
-            return '1';
-        }
-
-        if (is_callable(self::$version)) {
-            try {
-                return call_user_func(self::$version);
-            } catch (\Exception $e) {
-                // Fallback to default version if callback fails
-                return '1';
-            }
-        }
-
-        return self::$version;
+        self::getManager()->share($key, $value);
     }
 
-    /**
-     * Create an Inertia location redirect response
-     * 
-     * @param string $url The URL to redirect to
-     * @return Response
-     */
-    public static function location(string $url): Response
+    public static function shareOnce(string $key, callable $callback): OnceProp
     {
-        $request = Yii::$app->request;
-        $response = Yii::$app->response;
-        $response->headers->set('X-Inertia-Location', $url);
-        
-        // Return 409 for Inertia requests, 302 for regular requests
-        if (self::isInertiaRequest($request)) {
-            $response->setStatusCode(409); // Conflict status code for Inertia redirects
-        } else {
-            $response->setStatusCode(302);
-            $response->headers->set('Location', $url);
-        }
-        
-        return $response;
+        return self::getManager()->shareOnce($key, $callback);
     }
 
-    /**
-     * Set the root view template
-     * 
-     * @param string $view View path
-     * @return void
-     */
-    public static function setRootView(string $view): void
+    public static function getShared(?string $key = null, mixed $default = null): mixed
     {
-        self::$rootView = $view;
+        return self::getManager()->getShared($key, $default);
     }
 
-    /**
-     * Get the root view template
-     * 
-     * @return string
-     */
-    public static function getRootView(): string
-    {
-        return self::$rootView;
-    }
-
-    /**
-     * Flush shared props (useful for tests)
-     * 
-     * @return void
-     */
     public static function flushShared(): void
     {
-        self::$sharedProps = [];
+        self::getManager()->flushShared();
     }
 
     /**
-     * Check if the request is an Inertia request
-     * 
-     * @param Request $request
-     * @return bool
+     * Sets the asset version. Pass null to use the default (a hash of the Vite manifest).
      */
-    public static function isInertiaRequest(Request $request): bool
+    public static function version(string|int|Closure|null $version): void
     {
-        return $request->headers->has('X-Inertia');
+        self::getManager()->version = $version;
+    }
+
+    public static function getVersion(): string
+    {
+        return self::getManager()->getVersion();
+    }
+
+    public static function setRootView(string $view): void
+    {
+        self::getManager()->rootView = $view;
+    }
+
+    public static function getRootView(): string
+    {
+        return self::getManager()->rootView;
     }
 
     /**
-     * Check if this is a partial reload request
-     * 
-     * @param Request $request
-     * @return bool
+     * @param string|array<int|string, mixed> $url
      */
-    private static function isPartialReload(Request $request): bool
+    public static function location(string|array $url): Response
     {
-        return $request->headers->has('X-Inertia-Partial-Component') 
-            && $request->headers->has('X-Inertia-Partial-Data');
+        return self::getManager()->location($url);
     }
 
     /**
-     * Filter props based on partial reload headers
-     * 
-     * @param array<string, mixed> $props
-     * @param Request $request
-     * @return array<string, mixed>
+     * @param string|array<int|string, mixed> $fallback
      */
-    private static function filterPartialProps(array $props, Request $request): array
+    public static function back(string|array $fallback = ['/']): Response
     {
-        $partialData = $request->headers->get('X-Inertia-Partial-Data', '');
-        
-        // If partial data header is empty, return all props
-        if (empty(trim($partialData))) {
-            return $props;
+        return self::getManager()->back($fallback);
+    }
+
+    /**
+     * @param Model|array<string, string|list<string>> $errors
+     */
+    public static function withErrors(Model|array $errors, string $bag = 'default'): void
+    {
+        self::getManager()->withErrors($errors, $bag);
+    }
+
+    /**
+     * @param string|array<string, mixed> $key
+     */
+    public static function flash(string|array $key, mixed $value = null): void
+    {
+        self::getManager()->flash($key, $value);
+    }
+
+    public static function encryptHistory(bool $encrypt = true): void
+    {
+        self::getManager()->encryptHistory = $encrypt;
+    }
+
+    public static function clearHistory(): void
+    {
+        self::getManager()->clearHistory();
+    }
+
+    public static function preserveFragment(): void
+    {
+        self::getManager()->preserveFragment();
+    }
+
+    /**
+     * Disables server-side rendering, optionally based on a condition `fn (Request $request): bool`.
+     */
+    public static function disableSsr(bool|Closure $condition = true): void
+    {
+        self::getManager()->ssrEnabled = $condition instanceof Closure
+            ? static fn (Request $request) => !$condition($request)
+            : !$condition;
+    }
+
+    /**
+     * Excludes URL paths (e.g. `admin/*`) from server-side rendering.
+     *
+     * @param string|list<string> $paths
+     */
+    public static function withoutSsr(string|array $paths): void
+    {
+        $manager = self::getManager();
+        $manager->ssrExcept = array_merge($manager->ssrExcept, (array) $paths);
+    }
+
+    public static function isInertiaRequest(?Request $request = null): bool
+    {
+        return self::getManager()->isInertiaRequest($request);
+    }
+
+    /**
+     * A prop that is only evaluated when explicitly requested by a partial reload.
+     */
+    public static function optional(callable $callback): OptionalProp
+    {
+        return new OptionalProp($callback);
+    }
+
+    /**
+     * A prop that the client fetches in a separate request right after the page has rendered.
+     *
+     * @param bool $rescue whether to omit the prop (listing it in `rescuedProps`) instead of failing when it throws
+     */
+    public static function defer(callable $callback, string $group = 'default', bool $rescue = false): DeferProp
+    {
+        return new DeferProp($callback, $group, $rescue);
+    }
+
+    /**
+     * A prop that is included in every response, even partial reloads that did not request it.
+     */
+    public static function always(mixed $value): AlwaysProp
+    {
+        return new AlwaysProp($value);
+    }
+
+    /**
+     * A prop that the client appends to (or, with `->prepend()`, prepends to) the existing value.
+     */
+    public static function merge(mixed $value): MergeProp
+    {
+        return new MergeProp($value);
+    }
+
+    /**
+     * A prop that the client deep-merges into the existing value.
+     */
+    public static function deepMerge(mixed $value): MergeProp
+    {
+        return (new MergeProp($value))->deepMerge();
+    }
+
+    /**
+     * A prop that the client loads once and then remembers across page visits.
+     */
+    public static function once(callable $callback): OnceProp
+    {
+        return new OnceProp($callback);
+    }
+
+    /**
+     * A paginated prop for the `<InfiniteScroll>` component, typically a data provider.
+     *
+     * @param ProvidesScrollMetadata|callable|null $metadata
+     */
+    public static function scroll(mixed $value, string $wrapper = 'data', ProvidesScrollMetadata|callable|null $metadata = null): ScrollProp
+    {
+        return new ScrollProp($value, $wrapper, $metadata);
+    }
+
+    /**
+     * Renders the application root for the root view: the page data script and the element the
+     * client mounts on, or the server-side rendered markup.
+     *
+     * @param array<string, mixed> $page the `$page` variable of the root view
+     * @param array<string, mixed> $options HTML attributes of the root element
+     */
+    public static function app(array $page, ?SsrResponse $ssr = null, string $id = 'app', array $options = []): string
+    {
+        if ($ssr !== null) {
+            return $ssr->body;
         }
-        
-        $partialKeys = array_filter(array_map('trim', explode(',', $partialData)));
-        
-        // Always include shared props
-        $sharedKeys = array_keys(self::$sharedProps);
-        $allowedKeys = array_merge($sharedKeys, $partialKeys);
-        
-        return array_intersect_key($props, array_flip($allowedKeys));
+
+        return Html::tag('script', self::getManager()->encodePage($page), ['data-page' => $id, 'type' => 'application/json'])
+            . Html::tag('div', '', array_merge($options, ['id' => $id]));
     }
 
     /**
-     * Check if there's a version mismatch between request and current version
-     * 
-     * @param Request $request
-     * @return bool
+     * Renders the `<head>` elements produced by server-side rendering, if any.
      */
-    private static function hasVersionMismatch(Request $request): bool
+    public static function ssrHead(?SsrResponse $ssr): string
     {
-        if (!$request->headers->has('X-Inertia-Version')) {
-            return false;
-        }
+        return $ssr?->head ?? '';
+    }
 
-        $requestVersion = $request->headers->get('X-Inertia-Version');
-        $currentVersion = self::version();
-
-        return $requestVersion !== (string) $currentVersion;
+    public static function vite(): Vite
+    {
+        return self::getManager()->getVite();
     }
 }
-

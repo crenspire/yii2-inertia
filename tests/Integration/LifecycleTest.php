@@ -124,11 +124,26 @@ class LifecycleTest extends TestCase
         $this->assertSame('http://localhost/test/index#comments', $response->headers->get('X-Inertia-Redirect'));
         $this->assertFalse($response->headers->has('Location'));
 
-        $this->bootApp('/test/fragment', 'GET', $this->inertiaHeaders(['Purpose' => 'prefetch', 'X-Inertia-Version' => Inertia::getVersion()]));
+        $this->bootApp('/test/fragment', 'GET', $this->inertiaHeaders(['Purpose' => 'prefetch', 'X-Inertia-Version' => (string) md5_file(__DIR__ . '/../fixtures/web/dist/.vite/manifest.json')]));
         $this->assertSame(302, $this->runRoute('test/fragment')->getStatusCode());
 
         $this->bootApp('/test/fragment', 'POST');
         $this->assertSame(302, $this->runRoute('test/fragment')->getStatusCode());
+    }
+
+    public function testGuestsAreRedirectedToTheLoginPageByAccessControl(): void
+    {
+        $config = ['components' => ['user' => ['loginUrl' => ['/test/index']]]];
+        $this->bootApp('/test/private', 'GET', $this->inertiaHeaders([
+            'X-Inertia-Version' => (string) md5_file(__DIR__ . '/../fixtures/web/dist/.vite/manifest.json'),
+            'Accept' => 'text/html, application/xhtml+xml',
+        ]), $config);
+
+        $response = $this->runRoute('test/private');
+
+        $this->assertFalse(TestController::$ran);
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertSame('http://localhost/test/index', $response->headers->get('Location'));
     }
 
     public function testVaryHeaderIsAddedToEveryResponse(): void

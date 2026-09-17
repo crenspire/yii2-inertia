@@ -8,6 +8,7 @@ use Crenspire\Yii2Inertia\Inertia;
 use Crenspire\Yii2Inertia\Manager;
 use Crenspire\Yii2Inertia\Tests\Support\ArraySession;
 use Crenspire\Yii2Inertia\Tests\Support\TestController;
+use Crenspire\Yii2Inertia\Tests\Support\TestIdentity;
 use Crenspire\Yii2Inertia\Tests\Support\TestManager;
 use Yii;
 use yii\helpers\ArrayHelper;
@@ -79,6 +80,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
             'components' => [
                 'request' => ['cookieValidationKey' => 'test-key'],
                 'session' => ['class' => ArraySession::class],
+                'user' => ['identityClass' => TestIdentity::class, 'enableAutoLogin' => false],
                 'urlManager' => ['enablePrettyUrl' => true, 'showScriptName' => false],
                 'inertia' => [
                     'class' => TestManager::class,

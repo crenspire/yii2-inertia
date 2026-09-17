@@ -1,0 +1,25 @@
+{
+  "src/main.jsx": {
+    "file": "assets/main-abc123.js",
+    "name": "main",
+    "src": "src/main.jsx",
+    "isEntry": true,
+    "imports": ["_vendor-def456.js"],
+    "css": ["assets/main-aaa111.css"]
+  },
+  "_vendor-def456.js": {
+    "file": "assets/vendor-def456.js",
+    "name": "vendor",
+    "imports": ["src/main.jsx"],
+    "css": ["assets/vendor-bbb222.css"]
+  },
+  "src/app.css": {
+    "file": "assets/app-ccc333.css",
+    "src": "src/app.css",
+    "isEntry": true
+  },
+  "src/logo.svg": {
+    "file": "assets/logo-ddd444.svg",
+    "src": "src/logo.svg"
+  }
+}

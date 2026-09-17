@@ -7,7 +7,11 @@ Thank you for considering contributing to Yii2 Inertia!
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/your-username/yii2-inertia.git`
 3. Install dependencies: `composer install`
-4. Run tests: `vendor/bin/phpunit`
+4. Run tests: `composer test`
+
+The test suite starts a local PHP web server to exercise the SSR gateway, so it needs a free local port.
+
+To try changes in a browser, use the example application in `examples/basic` (see the README).
 
 ## Code Style
 
@@ -19,7 +23,8 @@ Thank you for considering contributing to Yii2 Inertia!
 ## Testing
 
 - Write tests for new features
-- Ensure all tests pass: `vendor/bin/phpunit`
+- Ensure all tests pass on every supported PHP version: `composer test`
+- Deprecations, notices and warnings fail the test suite
 - Aim for high code coverage
 
 ## Pull Request Process

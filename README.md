@@ -1,339 +1,359 @@
 # Yii2 Inertia.js Adapter
 
-[![CI](https://github.com/crenspire/yii2-inertia/workflows/CI/badge.svg)](https://github.com/crenspire/yii2-inertia/actions)
+[![CI](https://github.com/crenspire/yii2-inertia/actions/workflows/ci.yml/badge.svg)](https://github.com/crenspire/yii2-inertia/actions/workflows/ci.yml)
 
-An Inertia.js adapter for Yii2 framework, providing a seamless bridge between your Yii2 backend and modern JavaScript frontend frameworks (React, Vue, Svelte).
+The server-side adapter for [Inertia.js](https://inertiajs.com) v3 in the [Yii 2](https://www.yiiframework.com) framework.
+Build single-page apps with React, Vue or Svelte using ordinary Yii controllers, routing, validation and sessions — no API required.
 
-## Features
+- Complete Inertia v3 protocol: partial reloads, deferred, optional, once, merge and infinite scroll props, asset versioning, flash data, error bags, history encryption, fragment redirects
+- Works with Yii out of the box: redirects, CSRF protection, JSON form submissions and validation errors are handled for you
+- Vite integration (build manifest and dev server with HMR) and server-side rendering
+- Zero configuration to get started — the component bootstraps itself
 
-- 🚀 **Simple API**: Match the developer experience of `inertia-laravel`
-- 📦 **Shared Props**: Share data across all Inertia responses
-- 🔄 **Partial Reloads**: Support for partial page updates
-- 🎯 **Asset Versioning**: Automatic version management for cache busting
-- 🧪 **Well Tested**: Comprehensive unit and integration tests
-- 📚 **Full Documentation**: Complete usage examples and guides
+> Upgrading from 1.x? See [UPGRADE.md](UPGRADE.md).
+
+## Requirements
+
+- PHP 8.1+
+- Yii 2.0.55+
+- An Inertia.js v3 client adapter (`@inertiajs/react`, `@inertiajs/vue3` or `@inertiajs/svelte`)
 
 ## Installation
-
-Install via Composer:
 
 ```bash
 composer require crenspire/yii2-inertia
 ```
 
-## Quick Start
+The `inertia` application component is registered and bootstrapped automatically through Yii's extension bootstrapping.
+Configure it only when you need to change the defaults (see [Configuration](#configuration)).
 
-### 1. Configure Your Application
+### Root view
 
-In your `config/web.php`, register the Inertia view renderer:
-
-```php
-'view' => [
-    'renderers' => [
-        'inertia' => \Crenspire\Yii2Inertia\ViewRenderer::class,
-    ],
-],
-```
-
-### 2. Create Root View Template
-
-Create a root view template at `views/layouts/inertia.php`:
+Inertia pages are rendered into a root view on the first visit. Copy [`stubs/inertia.php`](stubs/inertia.php) to
+`views/layouts/inertia.php`:
 
 ```php
+<?php
+use Crenspire\Yii2Inertia\Inertia;
+use yii\helpers\Html;
+
+/** @var yii\web\View $this */
+/** @var array $page */
+/** @var Crenspire\Yii2Inertia\Ssr\SsrResponse|null $ssr */
+
+$this->beginPage();
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= Html::encode(Yii::$app->language) ?>">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inertia.js App</title>
-    <script type="module" crossorigin src="/dist/assets/index.js"></script>
-    <link rel="stylesheet" crossorigin href="/dist/assets/index.css">
+    <meta charset="<?= Html::encode(Yii::$app->charset) ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title data-inertia><?= Html::encode(Yii::$app->name) ?></title>
+    <?= Inertia::vite()->tags('src/main.jsx') ?>
+    <?= Inertia::ssrHead($ssr) ?>
+    <?php $this->head() ?>
 </head>
 <body>
-    <div id="app" data-page="<?= htmlspecialchars(json_encode($page), ENT_QUOTES, 'UTF-8') ?>"></div>
+<?php $this->beginBody() ?>
+<?= Inertia::app($page, $ssr) ?>
+<?php $this->endBody() ?>
 </body>
 </html>
+<?php $this->endPage() ?>
 ```
 
-### 3. Use in Controllers
+`Inertia::app()` outputs the page data (`<script data-page="app" type="application/json">`) and the `<div id="app">`
+the client mounts on.
+
+### Frontend
+
+```bash
+npm install @inertiajs/react react react-dom
+npm install --save-dev vite @vitejs/plugin-react
+```
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig(({ command }) => ({
+  plugins: [react()],
+  base: command === 'build' ? '/dist/' : '/',
+  build: {
+    outDir: '../web/dist', // served by Yii from @webroot/dist
+    manifest: true,
+    rollupOptions: { input: 'src/main.jsx' },
+  },
+  server: { origin: 'http://localhost:5173' },
+}))
+```
+
+```jsx
+// src/main.jsx
+import { createInertiaApp } from '@inertiajs/react'
+import { createRoot } from 'react-dom/client'
+
+createInertiaApp({
+  resolve: (name) => import.meta.glob('./pages/**/*.jsx', { eager: true })[`./pages/${name}.jsx`],
+  setup({ el, App, props }) {
+    createRoot(el).render(<App {...props} />)
+  },
+})
+```
+
+## Usage
+
+### Rendering pages
 
 ```php
 use Crenspire\Yii2Inertia\Inertia;
 
-class HomeController extends \yii\web\Controller
+class UserController extends \yii\web\Controller
 {
-    public function actionIndex()
+    public function actionIndex(): \yii\web\Response
     {
-        return Inertia::render('Home', [
-            'title' => 'Welcome',
-            'user' => Yii::$app->user->identity,
+        return Inertia::render('Users/Index', [
+            'users' => fn () => User::find()->select(['id', 'name', 'email'])->asArray()->all(),
+            'filters' => Yii::$app->request->get(),
         ]);
     }
 }
 ```
 
-### 4. Setup Frontend
+The global `inertia()` helper is a shortcut: `return inertia('Users/Index', [...]);`. Component names can also be
+string-backed enums. A third argument passes extra variables to the root view: `Inertia::render('Home', $props, ['title' => 'Home'])`.
 
-Install Inertia.js and your frontend framework:
+Closures are evaluated only when the prop is actually sent, and objects implementing `yii\base\Arrayable`
+(models, active records) are converted with `toArray()`.
 
-```bash
-npm install @inertiajs/inertia @inertiajs/inertia-react react react-dom
-```
+> **Security:** everything in props is sent to the browser. Passing a model sends all fields returned by its
+> `fields()` method — for an `ActiveRecord` identity that includes columns such as `password_hash` and `auth_key`.
+> Select the attributes explicitly (`$user->toArray(['id', 'name'])`) or override `fields()`.
 
-Create `src/main.jsx`:
+### Shared props
 
-```jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { createInertiaApp } from '@inertiajs/inertia-react';
-import Home from './pages/Home';
-
-createInertiaApp({
-  resolve: (name) => {
-    const pages = { Home };
-    return pages[name];
-  },
-  setup({ el, App, props }) {
-    ReactDOM.createRoot(el).render(<App {...props} />);
-  },
-});
-```
-
-## API Reference
-
-### Inertia::render()
-
-Render an Inertia page:
+Props available on every page:
 
 ```php
-return Inertia::render('Dashboard', [
-    'users' => User::find()->all(),
-]);
+// config/web.php
+'components' => [
+    'inertia' => [
+        'shared' => [
+            'appName' => 'My App',
+            'auth.user' => fn () => Yii::$app->user->identity?->toArray(['id', 'name']),
+        ],
+    ],
+],
 ```
 
-### Inertia::share()
-
-Share data with all Inertia responses:
+or at runtime, for example in a base controller's `init()`:
 
 ```php
-// Single key-value
-Inertia::share('appName', 'My App');
-
-// Multiple values
-Inertia::share([
-    'user' => Yii::$app->user->identity,
-    'flash' => Yii::$app->session->getFlash('message'),
-]);
-
-// Using closures
-Inertia::share('timestamp', function () {
-    return time();
-});
+Inertia::share('locale', Yii::$app->language);
+Inertia::share(['permissions' => fn () => $this->permissions()]);
+Inertia::shareOnce('countries', fn () => Country::find()->asArray()->all());
 ```
 
-### Inertia::version()
+Dot-notation keys create nested props. The `errors` prop is always shared.
 
-Set or get the asset version:
+### Forms, validation and redirects
 
-```php
-// String version
-Inertia::version('1.0.0');
-
-// Callback version
-Inertia::version(function () {
-    return filemtime(Yii::getAlias('@webroot/dist/manifest.json'));
-});
-
-// Get current version
-$version = Inertia::version();
-```
-
-### Inertia::location()
-
-Create an Inertia redirect response:
+Inertia submits forms as JSON; the adapter registers Yii's `JsonParser`, so `Yii::$app->request->post()` just works.
+Use regular Yii redirects after a submission:
 
 ```php
-return Inertia::location('/dashboard');
-```
-
-### Global Helper
-
-You can also use the global `inertia()` helper function:
-
-```php
-return inertia('Home', ['title' => 'Welcome']);
-```
-
-## Partial Reloads
-
-Inertia supports partial reloads for better performance. The client can request only specific props:
-
-```php
-// Client sends: X-Inertia-Partial-Component: Dashboard
-// Client sends: X-Inertia-Partial-Data: users,stats
-
-// Only 'users' and 'stats' props will be returned (plus shared props)
-return Inertia::render('Dashboard', [
-    'users' => $users,
-    'stats' => $stats,
-    'other' => $other, // This will be excluded
-]);
-```
-
-## Redirects
-
-For POST/PUT/PATCH/DELETE requests, Inertia handles redirects automatically:
-
-```php
-public function actionStore()
+public function actionStore(): \yii\web\Response
 {
-    // ... save data
-    
-    // For Inertia requests, returns 409 with X-Inertia-Location header
-    // For regular requests, returns 302 redirect
-    return Inertia::location('/dashboard');
+    $model = new User();
+    if (!$model->load(Yii::$app->request->post(), '') || !$model->save()) {
+        Inertia::withErrors($model);   // exposed as the `errors` prop of the next page
+
+        return Inertia::back();        // redirect to the previous page
+    }
+
+    Inertia::flash('success', 'User created.');
+
+    return $this->redirect(['user/index']);
 }
 ```
 
-The `Inertia::location()` method automatically detects the request type:
-- **Inertia requests**: Returns HTTP 409 with `X-Inertia-Location` header
-- **Regular requests**: Returns HTTP 302 with `Location` header
+The adapter takes care of the protocol details:
 
-## Version Management
+- `$this->redirect()` works for Inertia requests (Yii would otherwise replace the `Location` header with `X-Redirect` for AJAX requests)
+- `302` redirects after `PUT`, `PATCH` and `DELETE` become `303 See Other`
+- redirects to a URL with a `#fragment` are converted to an `X-Inertia-Redirect` response
+- an action that returns nothing for an Inertia request redirects back
 
-Inertia.js uses version checking to ensure the frontend and backend stay in sync. When the client's version doesn't match the server's version, a full page reload is triggered.
+`withErrors()` accepts a model or an `attribute => message(s)` array and an optional error bag name. Only the first
+message per attribute is sent unless `withAllErrors` is enabled.
 
-### Automatic Version Detection
+Use `Inertia::location($url)` for redirects that must leave the Inertia app (external URLs, non-Inertia pages); it
+responds with `409 Conflict` and `X-Inertia-Location` to Inertia requests.
 
-By default, the version is automatically detected from your `manifest.json` file:
-
-```php
-// Automatically uses dist/manifest.json mtime if it exists
-$version = Inertia::version();
-```
-
-### Custom Version
-
-You can set a custom version:
+### Flash data
 
 ```php
-// String version
-Inertia::version('1.0.0');
-
-// Callback version (evaluated on each request)
-Inertia::version(function () {
-    return filemtime(Yii::getAlias('@webroot/dist/manifest.json'));
-});
+Inertia::flash('toast', ['type' => 'success', 'message' => 'Saved']);
 ```
 
-### Version Mismatch Handling
+Flash data is delivered to the next rendered page as `page.flash` (not as a prop, so it is not stored in the browser history).
+Yii's own session flashes can still be shared as props if you prefer.
 
-When a client sends an `X-Inertia-Version` header that doesn't match the current version, the adapter automatically returns a location redirect (409 status) to trigger a full page reload. This ensures users always have the latest assets.
+### CSRF protection
+
+No setup is needed. The adapter puts the CSRF token in a JavaScript-readable `XSRF-TOKEN` cookie, which the Inertia
+HTTP client sends back in the `X-XSRF-TOKEN` header, and Yii validates it as usual.
+
+### Special props
+
+```php
+return Inertia::render('Dashboard', [
+    // Always evaluated.
+    'stats' => fn () => Stats::summary(),
+
+    // Only evaluated when requested: router.reload({ only: ['report'] })
+    'report' => Inertia::optional(fn () => Report::build()),
+
+    // Loaded by the client in a separate request after the page has rendered.
+    'activity' => Inertia::defer(fn () => Activity::latest()),
+    'permissions' => Inertia::defer(fn () => Permissions::all(), 'sidebar', rescue: true),
+
+    // Included even in partial reloads that did not request it.
+    'notifications' => Inertia::always(fn () => Notification::unreadCount()),
+
+    // Merged into the existing client-side value.
+    'messages' => Inertia::merge(fn () => $messages)->matchOn('id'),
+    'alerts' => Inertia::merge(fn () => $alerts)->prepend(),
+    'settings' => Inertia::deepMerge(fn () => $settings),
+
+    // Loaded once and remembered by the client across pages.
+    'plans' => Inertia::once(fn () => Plan::all())->until(3600),
+
+    // Paginated list for <InfiniteScroll>, from any paginated data provider.
+    'posts' => Inertia::scroll(fn () => new ActiveDataProvider(['query' => Post::find()])),
+]);
+```
+
+Special props can be nested at any depth, and partial reloads accept dot-notation paths (`only: ['auth.user']`).
+Classes implementing `ProvidesInertiaProperties` (several props) or `ProvidesInertiaProperty` (one value) can be used as props too.
+
+### Asset versioning
+
+When the client's asset version differs from the server's, the next visit is a full page load. By default the version
+is a hash of the Vite manifest. Set it explicitly when you use another build tool:
+
+```php
+Inertia::version(fn () => md5_file(Yii::getAlias('@webroot/assets/manifest.json')));
+```
+
+### History encryption
+
+```php
+Inertia::encryptHistory();   // or 'encryptHistory' => true in the component config
+Inertia::clearHistory();     // e.g. on logout
+```
+
+## Vite
+
+`Inertia::vite()->tags('src/main.jsx')` renders the tags for one or more entry points: in production from the
+build manifest (including CSS of imported chunks and `modulepreload` links), in development from the Vite dev server.
+
+```php
+'inertia' => [
+    'vite' => [
+        'buildPath' => '@webroot/dist',   // build.outDir
+        'baseUrl' => '@web/dist',
+        'devServerUrl' => YII_ENV_DEV ? 'http://localhost:5173' : null,
+        'reactRefresh' => true,           // for @vitejs/plugin-react
+    ],
+],
+```
+
+`Inertia::vite()->asset('src/images/logo.svg')` returns the URL of an asset processed by Vite.
+Script tags respect the view's `scriptOptions`, so a CSP nonce is applied automatically.
+
+## Server-side rendering
+
+1. Create an SSR entry point with `createServer()` from your Inertia client adapter and build it.
+2. Start the SSR server (`node dist/ssr.js`, port 13714 by default).
+3. Enable SSR:
+
+```php
+'inertia' => [
+    'ssrEnabled' => true,
+    'ssrExcept' => ['admin/*'],
+    'ssrGateway' => [
+        'class' => \Crenspire\Yii2Inertia\Ssr\HttpGateway::class,
+        'url' => 'http://127.0.0.1:13714',
+        'bundle' => '@app/frontend/dist/ssr.js', // optional: skip SSR when the bundle is missing
+    ],
+],
+```
+
+When the Vite dev server is configured, pages are rendered through the `@inertiajs/vite` plugin's dev endpoint instead.
+If rendering fails the error is logged and the page falls back to client-side rendering (set `throwOnError` on the
+gateway to throw instead). `Inertia::disableSsr()` and `Inertia::withoutSsr('path/*')` control SSR at runtime.
 
 ## Configuration
 
-### Root View Path
+All properties of the `inertia` component (`Crenspire\Yii2Inertia\Manager`):
 
-You can configure the root view path:
+| Property | Default | Description |
+|---|---|---|
+| `rootView` | `@app/views/layouts/inertia.php` | View rendered on the first visit |
+| `version` | `null` | Asset version: string, int or closure. `null` uses the Vite manifest hash |
+| `shared` | `[]` | Props shared with every page |
+| `encryptHistory` | `false` | Encrypt the history state of every page |
+| `withAllErrors` | `false` | Send all validation messages per attribute instead of the first one |
+| `exposeSharedPropKeys` | `true` | List shared prop keys in the page object (`sharedProps`) |
+| `urlResolver` | `null` | `fn (Request $request): string` to customize the page URL |
+| `enableCsrfCookie` | `true` | Send the `XSRF-TOKEN` cookie and accept the `X-XSRF-TOKEN` header |
+| `csrfCookieName` / `csrfHeaderName` | `XSRF-TOKEN` / `X-XSRF-TOKEN` | Change these if another app on the same host uses the same cookie name |
+| `registerJsonParser` | `true` | Register `JsonParser` for JSON request bodies |
+| `ssrEnabled` | `false` | Enable SSR (bool or `fn (Request $request): bool`) |
+| `ssrExcept` | `[]` | URL path patterns never server-side rendered |
+| `ssrGateway` | `HttpGateway` | SSR gateway object, component ID or configuration |
+| `vite` | `[]` | `Vite` helper configuration |
 
-```php
-Inertia::setRootView('@app/views/custom-inertia.php');
-```
-
-### Bootstrap/Initialization
-
-For shared props that should be available on every page, you can set them in your application bootstrap or a common controller:
-
-```php
-// In config/bootstrap.php or a base controller
-use Crenspire\Yii2Inertia\Inertia;
-
-// Share user data
-Inertia::share('user', function () {
-    return Yii::$app->user->identity;
-});
-
-// Share flash messages
-Inertia::share('flash', function () {
-    return [
-        'success' => Yii::$app->session->getFlash('success'),
-        'error' => Yii::$app->session->getFlash('error'),
-    ];
-});
-```
-
-## Troubleshooting
-
-### Version Mismatch Issues
-
-If you're experiencing frequent full page reloads, check:
-1. Your version callback is returning a stable value
-2. The `manifest.json` file exists and is accessible
-3. File permissions allow reading the manifest file
-
-### Redirect Not Working
-
-If redirects aren't working as expected:
-1. Ensure you're using `Inertia::location()` instead of Yii's `redirect()`
-2. Check that the request has the `X-Inertia` header for Inertia requests
-3. Verify the response status code (409 for Inertia, 302 for regular)
-
-### Root View Not Found
-
-If you get "Root view file not found" errors:
-1. Verify the path in `Inertia::setRootView()` is correct
-2. Check that the view file exists and is readable
-3. Ensure Yii aliases are properly configured
-
-## Running the Example
-
-The repository includes a complete example application. To run it:
-
-```bash
-# Install dependencies
-cd examples/basic
-composer install
-
-# Install frontend dependencies
-cd vite
-npm install
-
-# Build frontend assets
-npm run build
-
-# Or run dev server
-npm run dev
-
-# Start PHP server
-cd ../web
-php -S localhost:8000
-```
-
-Visit `http://localhost:8000` in your browser.
+If your application does not use Yii's extension bootstrapping (the `yiisoft/yii2-composer` plugin), add the component
+to the `bootstrap` list manually: `'bootstrap' => ['inertia']`.
 
 ## Testing
 
-Run the test suite:
+In functional tests, send the `X-Inertia: true` header and decode the JSON page object:
+
+```php
+$page = json_decode(Yii::$app->response->data, true);
+$this->assertSame('Users/Index', $page['component']);
+```
+
+`Inertia::getManager()->createPage('Users/Index', $props)` builds a page object without rendering.
+
+## Example application
+
+[`examples/basic`](examples/basic) is a complete application with React 19, Vite and Tailwind CSS, demonstrating deferred
+props, partial reloads, forms with validation errors, flash data and infinite scroll.
+
+```bash
+cd examples/basic
+composer install
+cd vite && npm install && npm run build && cd ..
+php -S localhost:8080 -t web web/router.php
+```
+
+For hot module replacement run `npm run dev` in `vite/` and start PHP with
+`VITE_DEV_SERVER=http://localhost:5173 php -S localhost:8080 -t web web/router.php`.
+
+## Development
 
 ```bash
 composer install
-vendor/bin/phpunit
+composer test
 ```
-
-## Requirements
-
-- PHP ^8.1
-- Yii2 ~2.0.50
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE).
 
-## Contributing
-
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for a list of changes.
-
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [CHANGELOG.md](CHANGELOG.md) for the release history.

@@ -1,6 +1,5 @@
 <?php
 
 return [
-    'adminEmail' => 'admin@example.com',
+    'appName' => 'Yii2 + Inertia',
 ];
-
